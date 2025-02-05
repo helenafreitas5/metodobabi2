@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+import altair as alt
 import sqlite3
 from datetime import datetime
 import requests
@@ -78,9 +78,15 @@ with tabs[1]:
                                         'Fortalezas', 'Fraquezas', 'Público',
                                         'Colaboração', 'Período'])
         
-        # Gráfico de tendências
-        fig = px.line(df, x='Data', y='Relevância', title='Tendência de Relevância')
-        st.plotly_chart(fig)
+        # Gráfico de tendências com Altair
+        chart = alt.Chart(df).mark_line().encode(
+            x='Data:T',
+            y='Relevância:N',
+            tooltip=['Data', 'Relevância']
+        ).properties(
+            title='Tendência de Relevância'
+        )
+        st.altair_chart(chart, use_container_width=True)
         
         # Tabela com paginação
         page_size = 10
@@ -117,9 +123,19 @@ with tabs[2]:
                 with st.chat_message("assistant"):
                     st.write(reply)
                     
-                # Análise de tópicos
-                topics = [word for word in user_input.split() if len(word) > 3]
-                st.bar_chart(pd.DataFrame({'tópico': topics, 'frequência': [1]*len(topics)}).set_index('tópico'))
+                # Análise de tópicos com Altair
+                topics_df = pd.DataFrame({
+                    'tópico': [word for word in user_input.split() if len(word) > 3],
+                    'frequência': [1] * len([word for word in user_input.split() if len(word) > 3])
+                })
+                
+                if not topics_df.empty:
+                    chart = alt.Chart(topics_df).mark_bar().encode(
+                        x='tópico',
+                        y='frequência',
+                        tooltip=['tópico', 'frequência']
+                    )
+                    st.altair_chart(chart, use_container_width=True)
 
 # 4️⃣ Decision Make
 with tabs[3]:
