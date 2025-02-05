@@ -61,40 +61,50 @@ with tabs[2]:
     st.header("🔬 Data Lab - Insights via Perplexity AI")
     st.write("Faça perguntas e descubra insights estratégicos.")
 
-    user_input = st.chat_input("Pergunte sobre tendências de mercado...")
+    user_input = st.text_input("🔎 Digite sua pergunta sobre tendências de mercado...")
     
-    if user_input:
-        st.session_state.messages.append({"role": "user", "content": user_input})
-        with st.chat_message("user"):
-            st.markdown(user_input)
-        
-        # Enviar requisição para Perplexity API
-        payload = {
-            "model": "sonar-reasoning-pro",
-            "messages": st.session_state.messages,
-            "include_sources": True  # Adiciona fontes na resposta
-        }
-        response = requests.post("https://api.perplexity.ai/chat/completions", headers=HEADERS, json=payload)
+    if st.button("🔍 Consultar Perplexity"):
+        if user_input:
+            st.session_state.messages.append({"role": "user", "content": user_input})
+            with st.chat_message("user"):
+                st.markdown(user_input)
+            
+            # Enviar requisição para Perplexity API
+            payload = {
+                "model": "sonar-reasoning-pro",
+                "messages": st.session_state.messages,
+                "include_sources": True  # Adiciona fontes na resposta
+            }
+            response = requests.post("https://api.perplexity.ai/chat/completions", headers=HEADERS, json=payload)
 
-        if response.status_code == 200:
-            response_data = response.json()
-            message = response_data["choices"][0]["message"]
+            if response.status_code == 200:
+                response_data = response.json()
+                message = response_data["choices"][0]["message"]
 
-            if "content" in message:
-                reply = message["content"]
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-                with st.chat_message("assistant"):
-                    st.markdown(reply)
+                if "content" in message:
+                    reply = message["content"]
+                    st.session_state.messages.append({"role": "assistant", "content": reply})
+                    with st.chat_message("assistant"):
+                        st.markdown(reply)
 
-            # 🔗 Exibir fontes de maneira visual
-            if "sources" in message and message["sources"]:
-                st.markdown("### 🔗 Fontes Utilizadas:")
-                cols = st.columns(len(message["sources"]))
-                for i, source in enumerate(message["sources"]):
-                    with cols[i]:
-                        st.markdown(f"**[{source['title']}]({source['url']})**", unsafe_allow_html=True)
-        else:
-            st.error(f"❌ Erro na API Perplexity: {response.json()}")
+                # 🔗 Exibir fontes como cartões interativos
+                if "sources" in message and message["sources"]:
+                    st.markdown("## 🔗 Fontes Utilizadas")
+                    cols = st.columns(len(message["sources"]))
+
+                    for i, source in enumerate(message["sources"]):
+                        with cols[i]:
+                            st.markdown(
+                                f"""
+                                <div style="border: 1px solid #ccc; padding: 10px; border-radius: 10px; text-align: center;">
+                                    <p><strong>{source['title']}</strong></p>
+                                    <a href="{source['url']}" target="_blank">🔗 Acessar Fonte</a>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
+            else:
+                st.error(f"❌ Erro na API Perplexity: {response.json()}")
 
 # 🤖 Seção de Decision Make
 with tabs[3]:
