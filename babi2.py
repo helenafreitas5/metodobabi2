@@ -1,113 +1,137 @@
 import streamlit as st
+import pandas as pd
+import plotly.express as px
+import sqlite3
+from datetime import datetime
 import requests
 import json
 import re
-from datetime import datetime
 
-# Configuração da Página
+# Configuração
 st.set_page_config(page_title="Método Babi - Monitoramento IA", layout="wide")
 
-# Carregar chave da API do Streamlit Secrets
-API_KEY = st.secrets["perplexity"]["API_KEY"]
-HEADERS = {
-    "Authorization": f"Bearer {API_KEY}",
-    "Content-Type": "application/json"
-}
+# Database Setup
+def init_db():
+    conn = sqlite3.connect('babi.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS noticias
+                 (data TEXT, link TEXT, relevancia TEXT, resumo TEXT, 
+                  fortalezas TEXT, fraquezas TEXT, publico TEXT, 
+                  colaboracao TEXT, periodo TEXT)''')
+    conn.commit()
+    return conn
 
-# Inicializar sessão
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+conn = init_db()
 
-if "noticias" not in st.session_state:
-    st.session_state.noticias = []
-
-# Criar Tabs de Navegação
+# Tabs
 tabs = st.tabs(["Configuração + Fontes", "Dashboard", "Data Lab", "Decision Make"])
 
-# 1️⃣ Configuração + Fontes
+# 1️⃣ Configuração
 with tabs[0]:
-    st.header("🔧 Configuração e Fontes de Dados")
-    st.write("Defina palavras-chave e fontes de coleta de dados para o monitoramento.")
-
-    keywords = st.text_area("Palavras-chave para monitoramento", "inteligência artificial, mercado, inovação")
-    fontes = st.text_area("Fontes de notícias (ex: Google Alerts, Notion)", "google.com, notion.so")
-
-    if st.button("Salvar Configuração"):
-        st.session_state.keywords = keywords
-        st.session_state.fontes = fontes
-        st.success("Configuração salva com sucesso!")
+    st.header("🔧 Configuração e Fontes")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        keywords = st.text_area("Palavras-chave", "IA, mercado, inovação")
+    with col2:
+        fontes = st.text_area("Fontes", "google.com, notion.so")
+    
+    if st.button("Salvar"):
+        st.session_state.update({'keywords': keywords, 'fontes': fontes})
+        st.success("✅ Configuração salva!")
 
 # 2️⃣ Dashboard
 with tabs[1]:
-    st.header("📊 Dashboard - Monitoramento de Notícias")
-    st.write("Visualização das últimas notícias categorizadas pela IA.")
-
-    if st.button("Adicionar Notícia Simulada"):
-        st.session_state.noticias.append({
-            "Data": datetime.now().strftime("%Y-%m-%d"),
-            "Link": "https://exemplo.com/noticia",
-            "Relevância": "Bomba",
-            "Resumo": "Nova tendência no mercado AI!",
-            "Fortalezas": "Alto impacto",
-            "Fraquezas": "Alto risco",
-            "Público-alvo": "Empresas de tecnologia",
-            "Colaboração": "Nenhuma",
-            "Período da Ação": "Q1 2025"
-        })
-
-    if st.session_state.noticias:
-        st.table(st.session_state.noticias)
-    else:
-        st.warning("Nenhuma notícia cadastrada ainda.")
+    st.header("📊 Dashboard")
+    
+    # Filtros
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        relevancia_filter = st.selectbox("Relevância", ["Todos", "Bomba", "Alta", "Média", "Baixa"])
+    with col2:
+        data_filter = st.date_input("Data Inicial")
+    with col3:
+        export = st.button("📥 Exportar CSV")
+    
+    # Visualizações
+    if st.button("+ Nova Notícia"):
+        with st.form("nova_noticia"):
+            data = st.date_input("Data")
+            link = st.text_input("Link")
+            relevancia = st.selectbox("Relevância", ["Bomba", "Alta", "Média", "Baixa"])
+            resumo = st.text_area("Resumo")
+            
+            if st.form_submit_button("Salvar"):
+                c = conn.cursor()
+                c.execute('''INSERT INTO noticias VALUES 
+                           (?,?,?,?,?,?,?,?,?)''', 
+                           (data.strftime("%Y-%m-%d"), link, relevancia, 
+                            resumo, "", "", "", "", ""))
+                conn.commit()
+                st.success("Notícia salva!")
+    
+    # Tabela e Gráficos
+    c = conn.cursor()
+    dados = c.execute("SELECT * FROM noticias").fetchall()
+    if dados:
+        df = pd.DataFrame(dados, columns=['Data', 'Link', 'Relevância', 'Resumo', 
+                                        'Fortalezas', 'Fraquezas', 'Público',
+                                        'Colaboração', 'Período'])
+        
+        # Gráfico de tendências
+        fig = px.line(df, x='Data', y='Relevância', title='Tendência de Relevância')
+        st.plotly_chart(fig)
+        
+        # Tabela com paginação
+        page_size = 10
+        page = st.number_input('Página', min_value=1, value=1)
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        
+        st.dataframe(df.iloc[start_idx:end_idx])
 
 # 3️⃣ Data Lab
 with tabs[2]:
-    st.header("🔬 Data Lab - Análise Semântica e IA")
-    st.write("Análise semântica com InfraNodus e respostas da API Perplexity.")
-
-    user_input = st.chat_input("Pergunte sobre as tendências do mercado...")
-
+    st.header("🔬 Data Lab")
+    
+    user_input = st.chat_input("Análise de tendências...")
+    
     if user_input:
-        st.session_state.messages.append({"role": "user", "content": user_input})
-
-        with st.chat_message("user"):
-            st.markdown(user_input)
-
-        payload = {
-            "model": "sonar-reasoning-pro",
-            "messages": st.session_state.messages
-        }
-
-        response = requests.post("https://api.perplexity.ai/chat/completions", headers=HEADERS, json=payload)
-
-        if response.status_code == 200:
-            response_data = response.json()
-            reply = response_data["choices"][0]["message"]["content"]
-            sources = response_data.get("sources", [])
-
-            reply_cleaned = re.sub(r"<think>.*?</think>", "", reply, flags=re.DOTALL).strip()
-
-            st.session_state.messages.append({"role": "assistant", "content": reply_cleaned})
-
-            with st.expander("💡 **Resposta da Perplexity**"):
-                st.markdown(f"**🔹 Resumo:** {reply_cleaned}")
-
-            if sources:
-                st.markdown("### 🔗 **Fontes da Resposta:**")
-                for i, source in enumerate(sources):
-                    st.markdown(f"- [{source['title']}]({source['url']})")
-            else:
-                st.markdown("🔍 **Nenhuma fonte foi encontrada para esta resposta.**")
-        else:
-            st.error(f"❌ Erro na API Perplexity: {response.json()}")
+        with st.spinner("Analisando..."):
+            # Simulação de análise de sentimento
+            sentiment = "Positivo" if "bom" in user_input.lower() else "Negativo"
+            st.info(f"Sentimento detectado: {sentiment}")
+            
+            # Chamada API
+            response = requests.post(
+                "https://api.perplexity.ai/chat/completions",
+                headers={"Content-Type": "application/json"},
+                json={
+                    "model": "sonar-reasoning-pro",
+                    "messages": [{"role": "user", "content": user_input}]
+                }
+            )
+            
+            if response.status_code == 200:
+                reply = response.json()["choices"][0]["message"]["content"]
+                with st.chat_message("assistant"):
+                    st.write(reply)
+                    
+                # Análise de tópicos
+                topics = [word for word in user_input.split() if len(word) > 3]
+                st.bar_chart(pd.DataFrame({'tópico': topics, 'frequência': [1]*len(topics)}).set_index('tópico'))
 
 # 4️⃣ Decision Make
 with tabs[3]:
-    st.header("🤖 Decision Make - Tomada de Decisão Automatizada")
-    st.write("IA ajuda a decidir próximos passos estratégicos.")
-
-    options = ["Ajustar Campanha", "Explorar Novos Mercados", "Melhorar Produto"]
-    decision = st.selectbox("Qual ação tomar?", options)
-
-    if st.button("Confirmar Ação"):
-        st.success(f"Ação '{decision}' registrada com sucesso!")
+    st.header("🤖 Decision Make")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        decision = st.selectbox("Ação", ["Campanha", "Novos Mercados", "Produto"])
+        impact = st.slider("Impacto Esperado", 0, 100)
+    
+    with col2:
+        st.metric("Confiança IA", f"{impact}%")
+        if st.button("Confirmar"):
+            st.balloons()
+            st.success(f"Ação '{decision}' registrada!")
