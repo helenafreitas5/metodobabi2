@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import re  # Biblioteca para remover padrões de texto
 
 # Configuração da Página
 st.set_page_config(page_title="Método Babi - Monitoramento IA", layout="wide")
@@ -17,30 +18,6 @@ if "messages" not in st.session_state:
 
 # Criar Tabs de Navegação
 tabs = st.tabs(["Configuração + Fontes", "Dashboard", "Data Lab", "Decision Make"])
-
-# 1️⃣ Configuração + Fontes
-with tabs[0]:
-    st.header("🔧 Configuração e Fontes de Dados")
-    st.write("Defina palavras-chave e fontes de coleta de dados para o monitoramento.")
-    
-    keywords = st.text_area("Palavras-chave para monitoramento", "inteligência artificial, mercado, inovação")
-    if st.button("Salvar Configuração"):
-        st.session_state.keywords = keywords
-        st.success("Configuração salva com sucesso!")
-
-# 2️⃣ Dashboard
-with tabs[1]:
-    st.header("📊 Dashboard - Monitoramento de Notícias")
-    st.write("Visualização das últimas notícias categorizadas pela IA.")
-    
-    # Simulação de notícias categorizadas
-    example_news = [
-        {"Data": "2025-02-05", "Link": "https://noticia1.com", "Relevância": "Bomba", "Resumo": "Nova tendência no mercado AI!",
-         "Fortalezas": "Alto impacto", "Fraquezas": "Alto risco", "Público-alvo": "Empresas de tecnologia", "Colaboração": "Nenhuma", "Período da Ação": "Q1 2025"},
-        {"Data": "2025-02-04", "Link": "https://noticia2.com", "Relevância": "BAU", "Resumo": "Concorrente lançou novo produto.",
-         "Fortalezas": "Inovação incremental", "Fraquezas": "Pouca adoção inicial", "Público-alvo": "Startups", "Colaboração": "Parceria com X", "Período da Ação": "Q2 2025"}
-    ]
-    st.table(example_news)
 
 # 3️⃣ Data Lab (Integração com Perplexity API)
 with tabs[2]:
@@ -69,11 +46,14 @@ with tabs[2]:
             reply = response_data["choices"][0]["message"]["content"]
             sources = response_data.get("sources", [])  # Obtém as fontes
 
-            st.session_state.messages.append({"role": "assistant", "content": reply})
+            # 🔹 **Remover qualquer "<think>" da resposta**
+            reply_cleaned = re.sub(r"<think>.*?</think>", "", reply, flags=re.DOTALL).strip()
+
+            st.session_state.messages.append({"role": "assistant", "content": reply_cleaned})
 
             # Melhor apresentação da resposta
             with st.expander("💡 **Resposta da Perplexity**"):
-                st.markdown(f"**🔹 Resumo:** {reply}")
+                st.markdown(f"**🔹 Resumo:** {reply_cleaned}")
 
             # Exibição de Fontes clicáveis
             if sources:
@@ -84,15 +64,3 @@ with tabs[2]:
                 st.markdown("🔍 **Nenhuma fonte foi encontrada para esta resposta.**")
         else:
             st.error(f"❌ Erro na API Perplexity: {response.json()}")
-
-# 4️⃣ Decision Make
-with tabs[3]:
-    st.header("🤖 Decision Make - Tomada de Decisão Automatizada")
-    st.write("IA ajuda a decidir próximos passos estratégicos.")
-    
-    options = ["Ajustar Campanha", "Explorar Novos Mercados", "Melhorar Produto"]
-    decision = st.selectbox("Qual ação tomar?", options)
-
-    if st.button("Confirmar Ação"):
-        st.success(f"Ação '{decision}' registrada com sucesso!")
-
