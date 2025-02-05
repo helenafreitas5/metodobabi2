@@ -54,7 +54,7 @@ with tabs[2]:
             st.markdown(user_input)
         
         payload = {
-            "model": "sonar-reasoning",
+            "model": "sonar-reasoning-pro",
             "messages": st.session_state.messages
         }
         response = requests.post("https://api.perplexity.ai/chat/completions", headers=HEADERS, json=payload)
