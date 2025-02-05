@@ -24,7 +24,7 @@ if "noticias" not in st.session_state:
 # Criar Tabs de Navegação
 tabs = st.tabs(["Configuração + Fontes", "Dashboard", "Data Lab", "Decision Make"])
 
-# 1️⃣ Configuração + Fontes (Fase 1 e 2)
+# 1️⃣ Configuração + Fontes
 with tabs[0]:
     st.header("🔧 Configuração e Fontes de Dados")
     st.write("Defina palavras-chave e fontes de coleta de dados para o monitoramento.")
@@ -37,12 +37,11 @@ with tabs[0]:
         st.session_state.fontes = fontes
         st.success("Configuração salva com sucesso!")
 
-# 2️⃣ Dashboard (Fase 3)
+# 2️⃣ Dashboard
 with tabs[1]:
     st.header("📊 Dashboard - Monitoramento de Notícias")
     st.write("Visualização das últimas notícias categorizadas pela IA.")
 
-    # Simulação de notícias categorizadas
     if st.button("Adicionar Notícia Simulada"):
         st.session_state.noticias.append({
             "Data": datetime.now().strftime("%Y-%m-%d"),
@@ -61,7 +60,7 @@ with tabs[1]:
     else:
         st.warning("Nenhuma notícia cadastrada ainda.")
 
-# 3️⃣ Data Lab (Fase 4)
+# 3️⃣ Data Lab
 with tabs[2]:
     st.header("🔬 Data Lab - Análise Semântica e IA")
     st.write("Análise semântica com InfraNodus e respostas da API Perplexity.")
@@ -86,26 +85,23 @@ with tabs[2]:
             reply = response_data["choices"][0]["message"]["content"]
             sources = response_data.get("sources", [])
 
-            # 🔹 **Remover qualquer "<think>" da resposta**
             reply_cleaned = re.sub(r"<think>.*?</think>", "", reply, flags=re.DOTALL).strip()
 
             st.session_state.messages.append({"role": "assistant", "content": reply_cleaned})
 
-            # Melhor apresentação da resposta
             with st.expander("💡 **Resposta da Perplexity**"):
                 st.markdown(f"**🔹 Resumo:** {reply_cleaned}")
 
-            # Exibição de Fontes clicáveis
             if sources:
                 st.markdown("### 🔗 **Fontes da Resposta:**")
                 for i, source in enumerate(sources):
-                    st.markdown(f"- [{source['title']}]({source['url']})")  # Fonte Clicável
+                    st.markdown(f"- [{source['title']}]({source['url']})")
             else:
                 st.markdown("🔍 **Nenhuma fonte foi encontrada para esta resposta.**")
         else:
             st.error(f"❌ Erro na API Perplexity: {response.json()}")
 
-# 4️⃣ Decision Make (Fase 5 e 6)
+# 4️⃣ Decision Make
 with tabs[3]:
     st.header("🤖 Decision Make - Tomada de Decisão Automatizada")
     st.write("IA ajuda a decidir próximos passos estratégicos.")
