@@ -69,7 +69,8 @@ with tabs[2]:
         
         payload = {
             "model": "sonar-reasoning-pro",
-            "messages": st.session_state.messages
+            "messages": st.session_state.messages,
+            "include_sources": True  # Solicita fontes na resposta
         }
         response = requests.post("https://api.perplexity.ai/chat/completions", headers=HEADERS, json=payload)
         
@@ -85,6 +86,13 @@ with tabs[2]:
                 response_box.markdown(response_text)
             
             st.session_state.messages.append({"role": "assistant", "content": reply})
+            
+            # Exibir fontes se houverem
+            if "sources" in response_data["choices"][0]["message"]:
+                sources = response_data["choices"][0]["message"]["sources"]
+                st.markdown("🔗 **Fontes:**")
+                for source in sources:
+                    st.markdown(f"- [{source['title']}]({source['url']})")
         else:
             st.error(f"❌ Erro na API Perplexity: {response.json()}")
 
