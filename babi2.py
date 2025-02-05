@@ -1,6 +1,5 @@
 import streamlit as st
 import requests
-import json
 
 # Configuração da Página
 st.set_page_config(page_title="Método Babi - Monitoramento IA", layout="wide")
@@ -16,101 +15,84 @@ HEADERS = {
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Layout principal
+# Criar Tabs de Navegação
 tabs = st.tabs(["Configuração + Fontes", "Dashboard", "Data Lab", "Decision Make"])
 
-# 🔧 Seção de Configuração + Fontes
+# 1️⃣ Configuração + Fontes
 with tabs[0]:
     st.header("🔧 Configuração e Fontes de Dados")
     st.write("Defina palavras-chave e fontes de coleta de dados para o monitoramento.")
+    
     keywords = st.text_area("Palavras-chave para monitoramento", "inteligência artificial, mercado, inovação")
     if st.button("Salvar Configuração"):
         st.session_state.keywords = keywords
         st.success("Configuração salva com sucesso!")
 
-# 📊 Seção de Dashboard - Monitoramento de Notícias
+# 2️⃣ Dashboard
 with tabs[1]:
     st.header("📊 Dashboard - Monitoramento de Notícias")
     st.write("Visualização das últimas notícias categorizadas pela IA.")
-
+    
     # Simulação de notícias categorizadas
     example_news = [
-        {
-            "Data": "2025-02-05",
-            "Título": "Grupo Boticário projeta crescimento ambicioso",
-            "Resumo": "O Grupo Boticário pretende expandir a produção em 50% até 2028, investindo R$ 4,2 bi.",
-            "Fonte": "https://noticia1.com"
-        },
-        {
-            "Data": "2025-02-04",
-            "Título": "Lançamento da linha 'Extinto' para sustentabilidade",
-            "Resumo": "Nova linha de fragrâncias com logística reversa e sustentabilidade.",
-            "Fonte": "https://noticia2.com"
-        }
+        {"Data": "2025-02-05", "Link": "https://noticia1.com", "Relevância": "Bomba", "Resumo": "Nova tendência no mercado AI!",
+         "Fortalezas": "Alto impacto", "Fraquezas": "Alto risco", "Público-alvo": "Empresas de tecnologia", "Colaboração": "Nenhuma", "Período da Ação": "Q1 2025"},
+        {"Data": "2025-02-04", "Link": "https://noticia2.com", "Relevância": "BAU", "Resumo": "Concorrente lançou novo produto.",
+         "Fortalezas": "Inovação incremental", "Fraquezas": "Pouca adoção inicial", "Público-alvo": "Startups", "Colaboração": "Parceria com X", "Período da Ação": "Q2 2025"}
     ]
+    st.table(example_news)
 
-    for news in example_news:
-        with st.container():
-            st.markdown(f"### 📰 {news['Título']}")
-            st.write(news["Resumo"])
-            st.markdown(f"[🔗 Leia mais]({news['Fonte']})", unsafe_allow_html=True)
-            st.divider()
-
-# 🔬 Seção de Data Lab - Integração com Perplexity API
+# 3️⃣ Data Lab (Integração com Perplexity API)
 with tabs[2]:
-    st.header("🔬 Data Lab - Insights via Perplexity AI")
-    st.write("Faça perguntas e descubra insights estratégicos.")
+    st.header("🔬 Data Lab - Análise Semântica e IA")
+    st.write("Análise semântica com InfraNodus e respostas da API Perplexity.")
 
-    user_input = st.text_input("🔎 Digite sua pergunta sobre tendências de mercado...")
-    
-    if st.button("🔍 Consultar Perplexity"):
-        if user_input:
-            st.session_state.messages.append({"role": "user", "content": user_input})
-            with st.chat_message("user"):
-                st.markdown(user_input)
-            
-            # Enviar requisição para Perplexity API
-            payload = {
-                "model": "sonar-reasoning-pro",
-                "messages": st.session_state.messages,
-                "include_sources": True  # Adiciona fontes na resposta
-            }
-            response = requests.post("https://api.perplexity.ai/chat/completions", headers=HEADERS, json=payload)
+    user_input = st.chat_input("Pergunte sobre as tendências do mercado...")
 
-            if response.status_code == 200:
-                response_data = response.json()
-                message = response_data["choices"][0]["message"]
+    if user_input:
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        
+        # Exibir input do usuário
+        with st.chat_message("user"):
+            st.markdown(user_input)
+        
+        # Enviar para a API da Perplexity
+        payload = {
+            "model": "sonar-reasoning-pro",
+            "messages": st.session_state.messages
+        }
+        
+        response = requests.post("https://api.perplexity.ai/chat/completions", headers=HEADERS, json=payload)
 
-                if "content" in message:
-                    reply = message["content"]
-                    st.session_state.messages.append({"role": "assistant", "content": reply})
-                    with st.chat_message("assistant"):
-                        st.markdown(reply)
+        if response.status_code == 200:
+            response_data = response.json()
+            reply = response_data["choices"][0]["message"]["content"]
+            sources = response_data.get("sources", [])  # Obtém as fontes
 
-                # 🔗 Exibir fontes como cartões interativos
-                if "sources" in message and message["sources"]:
-                    st.markdown("## 🔗 Fontes Utilizadas")
-                    cols = st.columns(len(message["sources"]))
+            st.session_state.messages.append({"role": "assistant", "content": reply})
 
-                    for i, source in enumerate(message["sources"]):
-                        with cols[i]:
-                            st.markdown(
-                                f"""
-                                <div style="border: 1px solid #ccc; padding: 10px; border-radius: 10px; text-align: center;">
-                                    <p><strong>{source['title']}</strong></p>
-                                    <a href="{source['url']}" target="_blank">🔗 Acessar Fonte</a>
-                                </div>
-                                """,
-                                unsafe_allow_html=True
-                            )
+            # Melhor apresentação da resposta
+            with st.expander("💡 **Resposta da Perplexity**"):
+                st.markdown(f"**🔹 Resumo:** {reply}")
+
+            # Exibição de Fontes clicáveis
+            if sources:
+                st.markdown("### 🔗 **Fontes da Resposta:**")
+                for i, source in enumerate(sources):
+                    st.markdown(f"- [{source['title']}]({source['url']})")  # Fonte Clicável
             else:
-                st.error(f"❌ Erro na API Perplexity: {response.json()}")
+                st.markdown("🔍 **Nenhuma fonte foi encontrada para esta resposta.**")
+        else:
+            st.error(f"❌ Erro na API Perplexity: {response.json()}")
 
-# 🤖 Seção de Decision Make
+# 4️⃣ Decision Make
 with tabs[3]:
     st.header("🤖 Decision Make - Tomada de Decisão Automatizada")
     st.write("IA ajuda a decidir próximos passos estratégicos.")
+    
     options = ["Ajustar Campanha", "Explorar Novos Mercados", "Melhorar Produto"]
     decision = st.selectbox("Qual ação tomar?", options)
+
     if st.button("Confirmar Ação"):
         st.success(f"Ação '{decision}' registrada com sucesso!")
+
