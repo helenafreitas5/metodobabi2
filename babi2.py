@@ -5,12 +5,8 @@ import pandas as pd
 # Configuração da Página
 st.set_page_config(page_title="Método Babi - Automação Inteligente", layout="wide")
 
-# Carregar API Key do Streamlit Secrets
+# Obter chave da API da Perplexity dos secrets do Streamlit
 API_KEY = st.secrets["perplexity"]["API_KEY"]
-HEADERS = {
-    "Authorization": f"Bearer {API_KEY}",
-    "Content-Type": "application/json"
-}
 
 # Barra de Navegação
 menu = st.sidebar.radio("Navegação", ["Configuração + Fontes", "Dashboard", "Data Lab", "Decision Make"])
@@ -58,10 +54,11 @@ elif menu == "Dashboard":
     # 🔵 Fase 4 e 5: Padrões e Monitoramento
     st.subheader("📈 Identificação de Padrões e Monitoramento Contínuo")
     st.write("Aqui serão exibidos padrões emergentes e mudanças nos territórios estratégicos detectados.")
-
+    
 # 🟠 3️⃣ Data Lab
 elif menu == "Data Lab":
     st.header("🧪 Data Lab - Análise Semântica com InfraNodus")
+    
     if st.button("🔍 Analisar com InfraNodus"):
         response = requests.get("https://api.infranodus.com/analysis", params={"query": palavras_chave})
         if response.status_code == 200:
@@ -93,14 +90,16 @@ elif menu == "Decision Make":
     st.subheader("🗣️ Chat com Perplexity API")
     consulta = st.text_input("Faça uma consulta à Perplexity AI:")
     if st.button("Consultar Perplexity"):
-        payload = {
-            "model": "sonar-small-chat",  # Atualizado para modelo válido
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": "sonar-reasoning",
             "messages": [{"role": "user", "content": consulta}]
         }
-        response = requests.post("https://api.perplexity.ai/chat/completions", json=payload, headers=HEADERS)
-        
+        response = requests.post("https://api.perplexity.ai/chat/completions", json=data, headers=headers)
         if response.status_code == 200:
-            resultado = response.json()
-            st.write(resultado)
+            st.write(response.json())
         else:
             st.error(f"❌ Erro na API Perplexity: {response.text}")
