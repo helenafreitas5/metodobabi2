@@ -1,105 +1,78 @@
 import streamlit as st
 import requests
-import pandas as pd
+import json
 
 # Configuração da Página
-st.set_page_config(page_title="Método Babi - Automação Inteligente", layout="wide")
+st.set_page_config(page_title="Método Babi - Monitoramento IA", layout="wide")
 
-# Obter chave da API da Perplexity dos secrets do Streamlit
+# Carregar chave da API do Streamlit Secrets
 API_KEY = st.secrets["perplexity"]["API_KEY"]
+HEADERS = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
 
-# Barra de Navegação
-menu = st.sidebar.radio("Navegação", ["Configuração + Fontes", "Dashboard", "Data Lab", "Decision Make"])
+# Inicializar sessão de histórico
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-# 🟢 1️⃣ Configuração + Fontes
-if menu == "Configuração + Fontes":
-    st.header("📌 Configuração Inicial")
-    frequencia = st.selectbox("Frequência de Análise:", ["Tempo Real", "Diária", "Semanal"])
-    palavras_chave = st.text_input("Palavras-chave para monitoramento:")
+# Layout principal
+tabs = st.tabs(["Configuração + Fontes", "Dashboard", "Data Lab", "Decision Make"])
+
+# Seção de Configuração + Fontes
+with tabs[0]:
+    st.header("🔧 Configuração e Fontes de Dados")
+    st.write("Defina palavras-chave e fontes de coleta de dados para o monitoramento.")
+    keywords = st.text_area("Palavras-chave para monitoramento", "inteligência artificial, mercado, inovação")
     if st.button("Salvar Configuração"):
-        st.success("✅ Configuração salva!")
-    
-    st.header("📡 Fontes de Dados")
-    fontes = ["Google Alerts", "RSS Feeds", "LinkedIn", "Instagram", "TikTok"]
-    selecionadas = st.multiselect("Selecione as fontes de monitoramento:", fontes, default=fontes)
-    if st.button("🔄 Atualizar Dados"):
-        st.success("Dados atualizados com sucesso!")
+        st.session_state.keywords = keywords
+        st.success("Configuração salva com sucesso!")
 
-# 🔵 2️⃣ Dashboard
-elif menu == "Dashboard":
-    st.header("📊 Dashboard - Monitoramento e Estratégia")
+# Seção de Dashboard
+with tabs[1]:
+    st.header("📊 Dashboard - Monitoramento de Notícias")
+    st.write("Visualização das últimas notícias categorizadas pela IA.")
     
-    # Categorização das Notícias
-    st.subheader("📰 Categorização Automática das Notícias")
-    categorias = ["BAU (Business as Usual)", "Bomba (Impacto Alto)", "Ação Ninja (Movimento Estratégico)"]
-    categoria_escolhida = st.radio("Escolha a categoria:", categorias)
-    if st.button("Classificar Notícias"):
-        st.success(f"✅ Notícias categorizadas como: {categoria_escolhida}")
-    
-    # Tabela de Monitoramento
-    st.subheader("📅 Últimas Notícias Categorizadas")
-    df = pd.DataFrame({
-        "Data": ["2025-02-05", "2025-02-04"],
-        "Link": ["https://noticia1.com", "https://noticia2.com"],
-        "Relevância": ["Bomba", "BAU"],
-        "Resumo (Tweet)": ["Nova tendência no mercado AI!", "Concorrente lançou novo produto."],
-        "Fortalezas": ["Alto impacto", "Inovação incremental"],
-        "Fraquezas": ["Alto risco", "Pouca adoção inicial"],
-        "Público-alvo": ["Empresas de tecnologia", "Startups"],
-        "Colaboração": ["Nenhuma", "Parceria com X"],
-        "Período da Ação": ["Q1 2025", "Q2 2025"]
-    })
-    st.dataframe(df)
-    
-    # 🔵 Fase 4 e 5: Padrões e Monitoramento
-    st.subheader("📈 Identificação de Padrões e Monitoramento Contínuo")
-    st.write("Aqui serão exibidos padrões emergentes e mudanças nos territórios estratégicos detectados.")
-    
-# 🟠 3️⃣ Data Lab
-elif menu == "Data Lab":
-    st.header("🧪 Data Lab - Análise Semântica com InfraNodus")
-    
-    if st.button("🔍 Analisar com InfraNodus"):
-        response = requests.get("https://api.infranodus.com/analysis", params={"query": palavras_chave})
-        if response.status_code == 200:
-            st.success("✅ Análise semântica concluída!")
-            st.json(response.json())
-        else:
-            st.error("❌ Erro ao conectar com InfraNodus")
+    # Simulação de notícias categorizadas
+    example_news = [
+        {"Data": "2025-02-05", "Link": "https://noticia1.com", "Relevância": "Bomba", "Resumo": "Nova tendência no mercado AI!",
+         "Fortalezas": "Alto impacto", "Fraquezas": "Alto risco", "Público-alvo": "Empresas de tecnologia", "Colaboração": "Nenhuma", "Período da Ação": "Q1 2025"},
+        {"Data": "2025-02-04", "Link": "https://noticia2.com", "Relevância": "BAU", "Resumo": "Concorrente lançou novo produto.",
+         "Fortalezas": "Inovação incremental", "Fraquezas": "Pouca adoção inicial", "Público-alvo": "Startups", "Colaboração": "Parceria com X", "Período da Ação": "Q2 2025"}
+    ]
+    st.table(example_news)
 
-# 🟣 4️⃣ Decision Make
-elif menu == "Decision Make":
-    st.header("🧠 Tomada de Decisão Interativa")
-    opcoes = ["Gerar insights estratégicos", "Priorizar categorização automática", "Ambos"]
-    decisao = st.radio("Qual abordagem deseja seguir?", opcoes)
-    if st.button("🚀 Enviar Decisão"):
-        st.success(f"✅ Decisão enviada: {decisao}")
+# Seção de Data Lab (Análise Semântica)
+with tabs[2]:
+    st.header("🔬 Data Lab - Análise Semântica e IA")
+    st.write("Análise semântica com InfraNodus e respostas da API Perplexity.")
     
-    st.header("📑 Geração de Relatórios e Ações")
-    if st.button("📤 Enviar relatório por e-mail"):
-        st.success("✅ Relatório enviado para metodobabi@gmail.com")
-    
-    # Chatbot com Zaia
-    st.subheader("🤖 Chatbot Zaia")
-    pergunta = st.text_input("Pergunte algo para Zaia:")
-    if st.button("Enviar Pergunta"):
-        response = "Zaia ainda está aprendendo! Em breve, terá respostas mais inteligentes."
-        st.write(response)
-    
-    # Chat com API da Perplexity
-    st.subheader("🗣️ Chat com Perplexity API")
-    consulta = st.text_input("Faça uma consulta à Perplexity AI:")
-    if st.button("Consultar Perplexity"):
-        headers = {
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type": "application/json"
-        }
-        data = {
+    user_input = st.chat_input("Pergunte sobre as tendências do mercado...")
+    if user_input:
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        with st.chat_message("user"):
+            st.markdown(user_input)
+        
+        payload = {
             "model": "sonar-reasoning",
-            "messages": [{"role": "user", "content": consulta}]
+            "messages": st.session_state.messages
         }
-        response = requests.post("https://api.perplexity.ai/chat/completions", json=data, headers=headers)
+        response = requests.post("https://api.perplexity.ai/chat/completions", headers=HEADERS, json=payload)
+        
         if response.status_code == 200:
-            st.write(response.json())
+            response_data = response.json()
+            reply = response_data["choices"][0]["message"]["content"]
+            st.session_state.messages.append({"role": "assistant", "content": reply})
+            with st.chat_message("assistant"):
+                st.markdown(reply)
         else:
-            st.error(f"❌ Erro na API Perplexity: {response.text}")
+            st.error(f"❌ Erro na API Perplexity: {response.json()}")
+
+# Seção de Decision Make
+with tabs[3]:
+    st.header("🤖 Decision Make - Tomada de Decisão Automatizada")
+    st.write("IA ajuda a decidir próximos passos estratégicos.")
+    options = ["Ajustar Campanha", "Explorar Novos Mercados", "Melhorar Produto"]
+    decision = st.selectbox("Qual ação tomar?", options)
+    if st.button("Confirmar Ação"):
+        st.success(f"Ação '{decision}' registrada com sucesso!")
