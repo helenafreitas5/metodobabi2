@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import json
+import time
 
 # Configuração da Página
 st.set_page_config(page_title="Método Babi - Monitoramento IA", layout="wide")
@@ -47,11 +48,24 @@ with tabs[2]:
     st.header("🔬 Data Lab - Análise Semântica e IA")
     st.write("Análise semântica com InfraNodus e respostas da API Perplexity.")
     
-    user_input = st.chat_input("Pergunte sobre as tendências do mercado...")
+    st.subheader("💬 Chat com a IA - Perplexity API")
+    
+    # Exibir histórico de mensagens com layout melhorado
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+    
+    user_input = st.chat_input("Digite sua pergunta...")
+    
     if user_input:
         st.session_state.messages.append({"role": "user", "content": user_input})
         with st.chat_message("user"):
             st.markdown(user_input)
+        
+        # Exibir indicador de carregamento
+        with st.chat_message("assistant"):
+            response_box = st.empty()
+            response_box.markdown("⏳ Processando resposta...")
         
         payload = {
             "model": "sonar-reasoning-pro",
@@ -62,9 +76,15 @@ with tabs[2]:
         if response.status_code == 200:
             response_data = response.json()
             reply = response_data["choices"][0]["message"]["content"]
+            
+            # Atualizar a resposta gradualmente
+            response_text = ""
+            for char in reply:
+                response_text += char
+                time.sleep(0.01)
+                response_box.markdown(response_text)
+            
             st.session_state.messages.append({"role": "assistant", "content": reply})
-            with st.chat_message("assistant"):
-                st.markdown(reply)
         else:
             st.error(f"❌ Erro na API Perplexity: {response.json()}")
 
